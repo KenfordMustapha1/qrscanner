@@ -38,10 +38,29 @@ export const AuthProvider = ({ children }) => {
       setAdmin(adminData);
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Login failed. Make sure the backend server is running.' 
-      };
+      const status = error.response?.status;
+      const data = error.response?.data;
+      const baseURL = api?.defaults?.baseURL;
+
+      let message =
+        (typeof data === 'object' && data?.message) ? data.message : undefined;
+
+      if (!message && typeof data === 'string' && data.trim()) {
+        message = `Request failed (HTTP ${status ?? '??'}).`;
+      }
+
+      if (!message) {
+        if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+          message = `Cannot reach the server. Your API base URL is set to: ${baseURL || '(not set)'} . On Vercel, set REACT_APP_API_URL to https://YOUR-RENDER-SERVICE.onrender.com/api and redeploy.`;
+        } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+          message = 'Request timed out. If using Render free tier, the server may be waking up—try again in 30 seconds.';
+        } else if (status) {
+          message = `Login failed (HTTP ${status}). Your API base URL is: ${baseURL || '(not set)'} .`;
+        } else {
+          message = `Login failed. Make sure REACT_APP_API_URL points to your backend. Current API base URL: ${baseURL || '(not set)'}.`;
+        }
+      }
+      return { success: false, message };
     }
   };
 
