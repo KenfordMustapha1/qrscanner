@@ -4,8 +4,7 @@ import { useOutletContext } from 'react-router-dom';
 const MyQRCode = () => {
   const { me } = useOutletContext();
   const employee = me?.employee;
-  const [qrCodeImage, setQrCodeImage] = useState(me?.qrCodeImage || null);
-  const [error, setError] = useState('');
+  const [qrCodeImage] = useState(me?.qrCodeImage || null);
 
   const subtitle = useMemo(() => {
     if (!employee) return '';
@@ -18,8 +17,6 @@ const MyQRCode = () => {
         <div className="emp-card-subtitle">
           Show this QR code during the scheduled scan time.
         </div>
-        {error && <div className="alert alert-error">{error}</div>}
-
       <div className="emp-qr-wrap">
         <div className="emp-qr-meta">
           <div className="emp-qr-name">{employee?.name || '—'}</div>
