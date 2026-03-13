@@ -30,6 +30,9 @@ const AdminLogin = () => {
   return (
     <div className="login-container">
       <div className="login-card">
+        <div className="login-logo">
+          <img src="/sklogo.png" alt="System logo" />
+        </div>
         <h1>Admin Login</h1>
         <p className="login-subtitle">QR Attendance System</p>
         

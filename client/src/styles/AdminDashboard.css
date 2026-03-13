@@ -227,6 +227,16 @@
   border-bottom: 1px solid var(--border-color);
 }
 
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.header-actions a {
+  text-decoration: none;
+}
+
 .dashboard-title {
   font-size: 32px;
   font-weight: 700;
@@ -318,6 +328,194 @@
 .stat-icon-purple {
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.2) 100%);
   color: #8b5cf6;
+}
+
+.stat-icon-red {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.2) 100%);
+  color: #ef4444;
+}
+
+.stat-icon-green {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.2) 100%);
+  color: #22c55e;
+}
+
+.stats-grid-5 {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.chart-card {
+  min-height: 360px;
+}
+
+.chart-container {
+  height: 300px;
+  margin-top: 16px;
+}
+
+.filter-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.export-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.input-date,
+.input-date-small {
+  padding: 8px 12px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+}
+
+.input-date-small {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.input-search {
+  padding: 8px 14px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+  min-width: 200px;
+  font-family: 'Inter', sans-serif;
+}
+
+.input-search:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-icon-small {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: rgba(22, 29, 235, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.btn-icon-small:hover {
+  background: rgba(22, 29, 235, 0.2);
+  transform: scale(1.05);
+}
+
+.btn-icon-small.btn-danger-icon {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.btn-icon-small.btn-danger-icon:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.icon-sm {
+  width: 18px;
+  height: 18px;
+}
+
+.card-subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 20px;
+  font-family: 'Inter', sans-serif;
+}
+
+.settings-form {
+  max-width: 400px;
+}
+
+.settings-schedule {
+  margin-top: 18px;
+}
+
+.settings-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 12px 0;
+  font-family: 'Poppins', sans-serif;
+}
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.schedule-card {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 14px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.schedule-title {
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--primary-color);
+  font-family: 'Poppins', sans-serif;
+}
+
+.schedule-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.schedule-row label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  width: 52px;
+}
+
+.schedule-row input[type="time"] {
+  flex: 1;
+  padding: 8px 10px;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  font-family: 'Inter', sans-serif;
+}
+
+.schedule-row input[type="time"]:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(22, 29, 235, 0.1);
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 13px;
 }
 
 .stat-content {
@@ -739,5 +937,34 @@
 
   .card {
     padding: 20px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .card-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .filter-group,
+  .export-group {
+    width: 100%;
+  }
+
+  .input-search {
+    min-width: 100%;
+  }
+
+  .schedule-grid {
+    grid-template-columns: 1fr;
   }
 }

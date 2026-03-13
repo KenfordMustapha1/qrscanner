@@ -9,11 +9,53 @@ const QRScanner = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [scannerStatus, setScannerStatus] = useState({ available: false, mode: null, message: '' });
+  const [holdCameraUntilMode, setHoldCameraUntilMode] = useState(null); // 'OUT' after IN, null otherwise
   const [isMobile, setIsMobile] = useState(false);
   const [isWindowsDesktop, setIsWindowsDesktop] = useState(false);
   const [cameras, setCameras] = useState([]);
   const [selectedCameraId, setSelectedCameraId] = useState('');
   const scannerRef = useRef(null);
+
+  const minutesFromHHMM = (hhmm) => {
+    const [h, m] = String(hhmm || '0:0').split(':').map(Number);
+    return (h * 60) + m;
+  };
+
+  const getUnavailableMessage = (status) => {
+    const schedule = status?.schedule;
+    const now = status?.now;
+    if (!schedule || !now) return status?.message || 'Scanner is currently unavailable. Please wait for the scheduled scan time.';
+
+    const t = minutesFromHHMM(now);
+    const inStart = minutesFromHHMM(schedule?.timeIn?.start);
+    const inEnd = minutesFromHHMM(schedule?.timeIn?.end);
+    const outStart = minutesFromHHMM(schedule?.timeOut?.start);
+    const outEnd = minutesFromHHMM(schedule?.timeOut?.end);
+
+    if (Number.isFinite(inStart) && t < inStart) {
+      return 'Scanner is currently unavailable. Please wait for the scheduled scan time.';
+    }
+    if (Number.isFinite(inEnd) && Number.isFinite(outStart) && t > inEnd && t < outStart) {
+      return 'Time-In scanning is closed.';
+    }
+    if (Number.isFinite(outEnd) && t > outEnd) {
+      return 'Time-Out scanning is closed.';
+    }
+    return status?.message || 'Scanner is currently unavailable. Please wait for the scheduled scan time.';
+  };
+
+  const nextAvailableText = (status) => {
+    const schedule = status?.schedule;
+    if (!schedule) return null;
+    if (holdCameraUntilMode === 'OUT') {
+      const start = schedule?.timeOut?.start;
+      return start ? `The scanner will be available again at ${start}.` : null;
+    }
+    const inStart = schedule?.timeIn?.start;
+    const outStart = schedule?.timeOut?.start;
+    return outStart ? `Next available scan time: ${outStart}.` : (inStart ? `Next available scan time: ${inStart}.` : null);
+  };
 
   const stopScanner = async () => {
     if (!scannerRef.current || !isScanning) return;
@@ -27,6 +69,15 @@ const QRScanner = () => {
   const startScanner = async () => {
     setError('');
     setSuccess('');
+
+    if (!scannerStatus.available) {
+      setError(getUnavailableMessage(scannerStatus));
+      return;
+    }
+    if (holdCameraUntilMode && scannerStatus.mode !== holdCameraUntilMode) {
+      setError(nextAvailableText(scannerStatus) || getUnavailableMessage(scannerStatus));
+      return;
+    }
 
     if (!scannerRef.current) {
       scannerRef.current = new Html5Qrcode('reader');
@@ -98,6 +149,33 @@ const QRScanner = () => {
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+    const fetchStatus = async () => {
+      try {
+        const res = await api.get('/attendance/status');
+        if (!isMounted) return;
+        setScannerStatus(res.data);
+        if (!res.data?.available && isScanning) {
+          await stopScanner();
+          setError(getUnavailableMessage(res.data));
+        }
+      } catch (e) {
+        // If status endpoint fails, don't hard block scanning, but show a hint.
+        if (!isMounted) return;
+        setScannerStatus((prev) => ({ ...prev, message: 'Unable to load scanner schedule.' }));
+      }
+    };
+
+    fetchStatus();
+    const id = setInterval(fetchStatus, 10000); // poll every 10s
+    return () => {
+      isMounted = false;
+      clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isScanning]);
+
   const handleScan = async (qrCode) => {
     setError('');
     setSuccess('');
@@ -116,17 +194,22 @@ const QRScanner = () => {
 
       setScanResult(attendance);
       await stopScanner();
-
-      setTimeout(() => {
-        setSuccess('');
-        setScanResult(null);
-        startScanner();
-      }, 3000);
+      // After a successful Time-In, keep camera hidden until Time-Out window opens
+      if (action === 'IN') {
+        setHoldCameraUntilMode('OUT');
+      } else {
+        // After Time-Out, keep camera off; user can come back next cycle
+        setHoldCameraUntilMode(null);
+      }
     } catch (error) {
       const apiMessage = error.response?.data?.message;
       const apiAttendance = error.response?.data?.attendance;
 
-      setError(apiMessage || 'Failed to record attendance');
+      if (error.response?.status === 403) {
+        setError(apiMessage || getUnavailableMessage(scannerStatus));
+      } else {
+        setError(apiMessage || 'Failed to record attendance');
+      }
 
       // If backend returned an existing attendance (e.g., already completed),
       // show it in the result card so admin can see times.
@@ -134,11 +217,6 @@ const QRScanner = () => {
         setScanResult(apiAttendance);
       }
       await stopScanner();
-      setTimeout(() => {
-        setError('');
-        setScanResult(null);
-        startScanner();
-      }, 3000);
     } finally {
       setLoading(false);
     }
@@ -159,15 +237,36 @@ const QRScanner = () => {
     <div className="scanner-container">
       <div className="scanner-card">
         <h1>QR Code Scanner</h1>
-        <p className="scanner-subtitle">Scan your QR code to record attendance</p>
+        <p className="scanner-subtitle">
+          {scannerStatus.available
+            ? (scannerStatus.mode === 'IN' ? 'Time-In scanning is open' : 'Time-Out scanning is open')
+            : 'Scanner is currently unavailable'}
+        </p>
 
         {error && <div className="alert alert-error">{error}</div>}
         {success && <div className="alert alert-success">{success}</div>}
 
-        <div id="reader" className="qr-reader"></div>
+        {scannerStatus.available && (!holdCameraUntilMode || scannerStatus.mode === holdCameraUntilMode) && !scanResult ? (
+          <div id="reader" className="qr-reader"></div>
+        ) : (
+          <div className="card scan-notice">
+            <h3 className="scan-result-title">Attendance Recorded Successfully</h3>
+            {scanResult?.userName && (
+              <p><strong>Employee:</strong> {scanResult.userName}</p>
+            )}
+            {scanResult?.timeIn && (
+              <p><strong>Time In:</strong> {scanResult.timeIn}</p>
+            )}
+            {!scannerStatus.available ? (
+              <p><strong>Status:</strong> {getUnavailableMessage(scannerStatus)}</p>
+            ) : (
+              <p><strong>Next:</strong> {nextAvailableText(scannerStatus) || 'Please wait for the next scheduled scan time.'}</p>
+            )}
+          </div>
+        )}
 
         {isMobile && cameras.length > 0 && (
-          <div className="camera-select">
+          <div className="input-group camera-select">
             <label htmlFor="camera-select">Camera</label>
             <select
               id="camera-select"
@@ -187,7 +286,7 @@ const QRScanner = () => {
           <button
             className="btn btn-accent"
             onClick={startScanner}
-            disabled={isScanning || loading}
+            disabled={isScanning || loading || !scannerStatus.available}
           >
             {isScanning ? 'Scanning...' : 'Start Scanning'}
           </button>
@@ -210,10 +309,11 @@ const QRScanner = () => {
         )}
 
         {scanResult && (
-          <div className="scan-result">
-            <h3>Attendance Recorded</h3>
+          <div className="card scan-result">
+            <h3 className="scan-result-title">Details</h3>
             <p><strong>Name:</strong> {scanResult.userName}</p>
-            <p><strong>Email:</strong> {scanResult.userEmail}</p>
+            {scanResult.employeeId && <p><strong>Employee ID:</strong> {scanResult.employeeId}</p>}
+            {scanResult.department && <p><strong>Department:</strong> {scanResult.department}</p>}
             <p><strong>Date:</strong> {new Date(scanResult.date).toLocaleDateString()}</p>
             <p><strong>Time In:</strong> {scanResult.timeIn || scanResult.time}</p>
             <p><strong>Time Out:</strong> {scanResult.timeOut || '—'}</p>

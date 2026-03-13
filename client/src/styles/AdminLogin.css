@@ -45,6 +45,19 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.login-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.login-logo img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 @keyframes cardSlideIn {
   from {
     opacity: 0;
@@ -149,9 +162,26 @@
 }
 
 /* Responsive Design */
+@media (max-width: 768px) {
+  .login-container {
+    padding: 16px;
+    align-items: flex-start;
+  }
+
+  .login-container.employee-login {
+    /* Avoid fixed backgrounds causing jank / cut-off on mobile */
+    background-attachment: scroll !important;
+    background-position: center top;
+  }
+
+  .login-card {
+    margin-top: 32px;
+  }
+}
+
 @media (max-width: 480px) {
   .login-card {
-    padding: 32px 24px;
+    padding: 28px 20px;
     border-radius: 16px;
   }
 
