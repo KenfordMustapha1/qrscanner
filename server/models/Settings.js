@@ -73,4 +73,17 @@ settingsSchema.statics.getQrTokenTtlSeconds = async function () {
   return DEFAULT_QR_TOKEN_TTL_SECONDS;
 };
 
+settingsSchema.statics.setQrTokenTtlSeconds = async function (seconds) {
+  const n = Number(seconds);
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new Error('qrTokenTtlSeconds must be a positive number');
+  }
+
+  await this.findOneAndUpdate(
+    { key: 'qrTokenTtlSeconds' },
+    { value: n, updatedAt: new Date() },
+    { upsert: true, new: true }
+  );
+};
+
 module.exports = mongoose.model('Settings', settingsSchema);
