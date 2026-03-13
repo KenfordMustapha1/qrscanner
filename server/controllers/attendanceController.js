@@ -76,6 +76,13 @@ exports.scanQR = async (req, res) => {
       });
     }
 
+    if (mode === 'OUT' && (!outStart || !outEnd)) {
+      return res.status(403).json({
+        message: 'Time-Out scanning is disabled by the administrator.',
+        schedule
+      });
+    }
+
     // Check if attendance already recorded for today
     const existingAttendance = await Attendance.findOne({
       userId: user._id,
@@ -183,6 +190,13 @@ exports.scanQR = async (req, res) => {
           const outWindow = outStart && outEnd && isInWindow(time, outStart, outEnd);
           if (inWindow && !outWindow) mode = 'IN';
           if (outWindow && !inWindow) mode = 'OUT';
+
+          if (mode === 'OUT' && (!outStart || !outEnd)) {
+            return res.status(403).json({
+              message: 'Time-Out scanning is disabled by the administrator.',
+              schedule
+            });
+          }
 
           if (mode === 'IN') {
             if (existingAttendance.timeIn) {

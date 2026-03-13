@@ -21,8 +21,7 @@ const settingsSchema = new mongoose.Schema({
 // Default late cutoff: 8:10 AM (HH:mm)
 const DEFAULT_LATE_CUTOFF = '08:10';
 const DEFAULT_SCHEDULE = {
-  timeIn: { start: '07:30', end: '08:10' },
-  timeOut: { start: '16:00', end: '17:30' }
+  timeIn: { start: '07:30', end: '08:10' }
 };
 
 // Default QR token TTL in seconds (e.g. 30s)

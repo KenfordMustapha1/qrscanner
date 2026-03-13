@@ -644,42 +644,6 @@ const AdminDashboard = () => {
                         />
                       </div>
                     </div>
-
-                    <div className="schedule-card">
-                      <div className="schedule-title">Time-Out Schedule</div>
-                      <div className="schedule-row">
-                        <label>Start</label>
-                        <input
-                          type="time"
-                          value={settings.scanSchedule?.timeOut?.start || '16:00'}
-                          onChange={(e) =>
-                            setSettings({
-                              ...settings,
-                              scanSchedule: {
-                                ...settings.scanSchedule,
-                                timeOut: { ...settings.scanSchedule.timeOut, start: e.target.value }
-                              }
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="schedule-row">
-                        <label>End</label>
-                        <input
-                          type="time"
-                          value={settings.scanSchedule?.timeOut?.end || '17:30'}
-                          onChange={(e) =>
-                            setSettings({
-                              ...settings,
-                              scanSchedule: {
-                                ...settings.scanSchedule,
-                                timeOut: { ...settings.scanSchedule.timeOut, end: e.target.value }
-                              }
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
                   </div>
                 </div>
                 <button type="submit" className="btn btn-accent">Save Settings</button>
