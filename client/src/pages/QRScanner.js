@@ -15,10 +15,53 @@ const QRScanner = () => {
   const [cameras, setCameras] = useState([]);
   const [selectedCameraId, setSelectedCameraId] = useState('');
   const scannerRef = useRef(null);
+  const startTimeoutRef = useRef(null);
+  const SCANNER_START_TIMEOUT_MS = 15000;
 
-  const minutesFromHHMM = (hhmm) => {
-    const [h, m] = String(hhmm || '0:0').split(':').map(Number);
-    return (h * 60) + m;
+  const minutesFromTimeString = (value) => {
+    const raw = String(value ?? '').trim().toLowerCase();
+    if (!raw) return NaN;
+
+    // Accept: "HH:MM" (24h) OR "H:MM am/pm" OR "HH:MMam"
+    const match = raw.match(/^(\d{1,2})\s*:\s*(\d{2})(?:\s*(am|pm))?$/i);
+    if (!match) return NaN;
+
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const meridiem = match[3]?.toLowerCase();
+
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return NaN;
+    if (minutes < 0 || minutes > 59) return NaN;
+
+    if (meridiem) {
+      if (hours < 1 || hours > 12) return NaN;
+      if (meridiem === 'am') hours = hours % 12;
+      if (meridiem === 'pm') hours = (hours % 12) + 12;
+    } else {
+      if (hours < 0 || hours > 23) return NaN;
+    }
+
+    return (hours * 60) + minutes;
+  };
+
+  const getCameraStartErrorMessage = (err) => {
+    const name = err?.name || err?.toString?.();
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+      return 'Camera permission was blocked. Allow camera access in your browser settings and try again.';
+    }
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      return 'No camera device found on this device.';
+    }
+    if (name === 'NotReadableError' || name === 'TrackStartError') {
+      return 'Camera is already in use by another app/tab. Close other apps using the camera and try again.';
+    }
+    if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError') {
+      return 'Selected camera is not available. Try switching cameras and start again.';
+    }
+    if (String(err?.message || '').toLowerCase().includes('secure')) {
+      return 'Camera access requires HTTPS. Make sure you are using an HTTPS URL.';
+    }
+    return 'Unable to start camera. Check permissions and try again.';
   };
 
   const getUnavailableMessage = (status) => {
@@ -26,11 +69,16 @@ const QRScanner = () => {
     const now = status?.now;
     if (!schedule || !now) return status?.message || 'Scanner is currently unavailable. Please wait for the scheduled scan time.';
 
-    const t = minutesFromHHMM(now);
-    const inStart = minutesFromHHMM(schedule?.timeIn?.start);
-    const inEnd = minutesFromHHMM(schedule?.timeIn?.end);
-    const outStart = minutesFromHHMM(schedule?.timeOut?.start);
-    const outEnd = minutesFromHHMM(schedule?.timeOut?.end);
+    const t = minutesFromTimeString(now);
+    const inStart = minutesFromTimeString(schedule?.timeIn?.start);
+    const inEnd = minutesFromTimeString(schedule?.timeIn?.end);
+    const outStart = minutesFromTimeString(schedule?.timeOut?.start);
+    const outEnd = minutesFromTimeString(schedule?.timeOut?.end);
+
+    // If "now" is unparsable (often locale formatting differences in prod), don't mislead with schedule math.
+    if (!Number.isFinite(t)) {
+      return status?.message || 'Scanner is currently unavailable. Please wait for the scheduled scan time.';
+    }
 
     if (Number.isFinite(inStart) && t < inStart) {
       return 'Scanner is currently unavailable. Please wait for the scheduled scan time.';
@@ -53,6 +101,10 @@ const QRScanner = () => {
   };
 
   const stopScanner = async () => {
+    if (startTimeoutRef.current) {
+      clearTimeout(startTimeoutRef.current);
+      startTimeoutRef.current = null;
+    }
     if (!scannerRef.current || !isScanning) return;
     try {
       await scannerRef.current.stop();
@@ -75,6 +127,11 @@ const QRScanner = () => {
     }
 
     try {
+      if (startTimeoutRef.current) {
+        clearTimeout(startTimeoutRef.current);
+        startTimeoutRef.current = null;
+      }
+
       let cameraConfig;
 
       if (isWindowsDesktop) {
@@ -91,15 +148,30 @@ const QRScanner = () => {
         cameraConfig = { facingMode: 'user' };
       }
 
+      startTimeoutRef.current = setTimeout(() => {
+        // If start hangs in production (common on some mobile browsers), fail fast with a clear message.
+        setError('Camera start timed out. Reload the page and try again, or switch browsers/devices.');
+        stopScanner();
+      }, SCANNER_START_TIMEOUT_MS);
+
       await scannerRef.current.start(
         cameraConfig,
         { fps: 10, qrbox: { width: 250, height: 250 } },
         handleScan,
         () => {}
       );
+
+      if (startTimeoutRef.current) {
+        clearTimeout(startTimeoutRef.current);
+        startTimeoutRef.current = null;
+      }
       setIsScanning(true);
     } catch (err) {
-      setError('Unable to start camera. Check permissions and try again.');
+      if (startTimeoutRef.current) {
+        clearTimeout(startTimeoutRef.current);
+        startTimeoutRef.current = null;
+      }
+      setError(getCameraStartErrorMessage(err));
       setIsScanning(false);
     }
   };
@@ -133,6 +205,10 @@ const QRScanner = () => {
     }
 
     return () => {
+      if (startTimeoutRef.current) {
+        clearTimeout(startTimeoutRef.current);
+        startTimeoutRef.current = null;
+      }
       if (scannerRef.current) {
         scannerRef.current.stop().catch(() => {});
         scannerRef.current.clear().catch(() => {});
