@@ -10,7 +10,6 @@ const QRScanner = () => {
   const [loading, setLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [scannerStatus, setScannerStatus] = useState({ available: false, mode: null, message: '' });
-  const [holdCameraUntilMode, setHoldCameraUntilMode] = useState(null); // 'OUT' after IN, null otherwise
   const [isMobile, setIsMobile] = useState(false);
   const [isWindowsDesktop, setIsWindowsDesktop] = useState(false);
   const [cameras, setCameras] = useState([]);
@@ -48,10 +47,6 @@ const QRScanner = () => {
   const nextAvailableText = (status) => {
     const schedule = status?.schedule;
     if (!schedule) return null;
-    if (holdCameraUntilMode === 'OUT') {
-      const start = schedule?.timeOut?.start;
-      return start ? `The scanner will be available again at ${start}.` : null;
-    }
     const inStart = schedule?.timeIn?.start;
     const outStart = schedule?.timeOut?.start;
     return outStart ? `Next available scan time: ${outStart}.` : (inStart ? `Next available scan time: ${inStart}.` : null);
@@ -72,10 +67,6 @@ const QRScanner = () => {
 
     if (!scannerStatus.available) {
       setError(getUnavailableMessage(scannerStatus));
-      return;
-    }
-    if (holdCameraUntilMode && scannerStatus.mode !== holdCameraUntilMode) {
-      setError(nextAvailableText(scannerStatus) || getUnavailableMessage(scannerStatus));
       return;
     }
 
@@ -194,13 +185,6 @@ const QRScanner = () => {
 
       setScanResult(attendance);
       await stopScanner();
-      // After a successful Time-In, keep camera hidden until Time-Out window opens
-      if (action === 'IN') {
-        setHoldCameraUntilMode('OUT');
-      } else {
-        // After Time-Out, keep camera off; user can come back next cycle
-        setHoldCameraUntilMode(null);
-      }
     } catch (error) {
       const apiMessage = error.response?.data?.message;
       const apiAttendance = error.response?.data?.attendance;
@@ -246,22 +230,13 @@ const QRScanner = () => {
         {error && <div className="alert alert-error">{error}</div>}
         {success && <div className="alert alert-success">{success}</div>}
 
-        {scannerStatus.available && (!holdCameraUntilMode || scannerStatus.mode === holdCameraUntilMode) && !scanResult ? (
+        {scannerStatus.available ? (
           <div id="reader" className="qr-reader"></div>
         ) : (
           <div className="card scan-notice">
-            <h3 className="scan-result-title">Attendance Recorded Successfully</h3>
-            {scanResult?.userName && (
-              <p><strong>Employee:</strong> {scanResult.userName}</p>
-            )}
-            {scanResult?.timeIn && (
-              <p><strong>Time In:</strong> {scanResult.timeIn}</p>
-            )}
-            {!scannerStatus.available ? (
-              <p><strong>Status:</strong> {getUnavailableMessage(scannerStatus)}</p>
-            ) : (
-              <p><strong>Next:</strong> {nextAvailableText(scannerStatus) || 'Please wait for the next scheduled scan time.'}</p>
-            )}
+            <h3 className="scan-result-title">Scanner Unavailable</h3>
+            <p><strong>Status:</strong> {getUnavailableMessage(scannerStatus)}</p>
+            <p><strong>Next:</strong> {nextAvailableText(scannerStatus) || 'Please wait for the next scheduled scan time.'}</p>
           </div>
         )}
 

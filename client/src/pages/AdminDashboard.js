@@ -22,7 +22,6 @@ const AdminDashboard = () => {
   const [analytics, setAnalytics] = useState([]);
   const [settings, setSettings] = useState({
     lateCutoffTime: '08:10',
-    qrTokenTtlSeconds: 30,
     scanSchedule: {
       timeIn: { start: '07:30', end: '08:10' },
       timeOut: { start: '16:00', end: '17:30' }
@@ -92,7 +91,10 @@ const AdminDashboard = () => {
   const fetchSettings = useCallback(async () => {
     try {
       const response = await api.get('/admin/settings');
-      setSettings(response.data);
+      setSettings({
+        lateCutoffTime: response.data.lateCutoffTime,
+        scanSchedule: response.data.scanSchedule
+      });
     } catch (err) {
       console.error('Error fetching settings:', err);
     }
@@ -185,7 +187,6 @@ const AdminDashboard = () => {
     try {
       await api.put('/admin/settings', {
         lateCutoffTime: settings.lateCutoffTime,
-        qrTokenTtlSeconds: settings.qrTokenTtlSeconds,
         scanSchedule: settings.scanSchedule
       });
       setSuccess('Settings saved!');
@@ -590,22 +591,6 @@ const AdminDashboard = () => {
                   />
                 </div>
 
-                <div className="input-group">
-                  <label htmlFor="qrTtl">QR Expiry (seconds)</label>
-                  <input
-                    type="number"
-                    id="qrTtl"
-                    min={10}
-                    max={300}
-                    value={settings.qrTokenTtlSeconds ?? 30}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        qrTokenTtlSeconds: Math.max(10, Math.min(300, Number(e.target.value) || 30))
-                      })
-                    }
-                  />
-                </div>
                 <div className="settings-schedule">
                   <h3 className="settings-section-title">Scanner Schedule</h3>
                   <div className="schedule-grid">

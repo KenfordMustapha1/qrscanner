@@ -24,8 +24,6 @@ const DEFAULT_SCHEDULE = {
   timeIn: { start: '07:30', end: '08:10' }
 };
 
-// Default QR token TTL in seconds (e.g. 30s)
-const DEFAULT_QR_TOKEN_TTL_SECONDS = 30;
 
 settingsSchema.statics.getLateCutoff = async function () {
   const doc = await this.findOne({ key: 'lateCutoffTime' });
@@ -49,38 +47,6 @@ settingsSchema.statics.setScanSchedule = async function (schedule) {
   await this.findOneAndUpdate(
     { key: 'scanSchedule' },
     { value: schedule, updatedAt: new Date() },
-    { upsert: true, new: true }
-  );
-};
-
-/**
- * Get QR token TTL in seconds for rotating employee QR codes.
- * Falls back to env var QR_TOKEN_TTL_SECONDS or a sane default.
- */
-settingsSchema.statics.getQrTokenTtlSeconds = async function () {
-  const doc = await this.findOne({ key: 'qrTokenTtlSeconds' });
-
-  if (doc && typeof doc.value === 'number' && Number.isFinite(doc.value) && doc.value > 0) {
-    return doc.value;
-  }
-
-  const envVal = Number(process.env.QR_TOKEN_TTL_SECONDS);
-  if (Number.isFinite(envVal) && envVal > 0) {
-    return envVal;
-  }
-
-  return DEFAULT_QR_TOKEN_TTL_SECONDS;
-};
-
-settingsSchema.statics.setQrTokenTtlSeconds = async function (seconds) {
-  const n = Number(seconds);
-  if (!Number.isFinite(n) || n <= 0) {
-    throw new Error('qrTokenTtlSeconds must be a positive number');
-  }
-
-  await this.findOneAndUpdate(
-    { key: 'qrTokenTtlSeconds' },
-    { value: n, updatedAt: new Date() },
     { upsert: true, new: true }
   );
 };

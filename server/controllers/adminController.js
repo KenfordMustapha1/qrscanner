@@ -227,8 +227,7 @@ exports.getSettings = async (req, res) => {
   try {
     const lateCutoff = await Settings.getLateCutoff();
     const scanSchedule = await Settings.getScanSchedule();
-    const qrTokenTtlSeconds = await Settings.getQrTokenTtlSeconds();
-    res.json({ lateCutoffTime: lateCutoff, scanSchedule, qrTokenTtlSeconds });
+    res.json({ lateCutoffTime: lateCutoff, scanSchedule });
   } catch (error) {
     console.error('Get settings error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -238,24 +237,19 @@ exports.getSettings = async (req, res) => {
 // Update Settings
 exports.updateSettings = async (req, res) => {
   try {
-    const { lateCutoffTime, scanSchedule, qrTokenTtlSeconds } = req.body;
+    const { lateCutoffTime, scanSchedule } = req.body;
     if (lateCutoffTime) {
       await Settings.setLateCutoff(lateCutoffTime);
     }
     if (scanSchedule) {
       await Settings.setScanSchedule(scanSchedule);
     }
-    if (qrTokenTtlSeconds !== undefined) {
-      await Settings.setQrTokenTtlSeconds(qrTokenTtlSeconds);
-    }
     const lateCutoff = await Settings.getLateCutoff();
     const savedSchedule = await Settings.getScanSchedule();
-    const savedQrTtl = await Settings.getQrTokenTtlSeconds();
     res.json({
       message: 'Settings updated',
       lateCutoffTime: lateCutoff,
-      scanSchedule: savedSchedule,
-      qrTokenTtlSeconds: savedQrTtl
+      scanSchedule: savedSchedule
     });
   } catch (error) {
     console.error('Update settings error:', error);
